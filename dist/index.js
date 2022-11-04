@@ -100,6 +100,8 @@ const approvePr = () => __awaiter(void 0, void 0, void 0, function* () {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.debug(`context.eventName:: ${context.eventName}`);
+            core.debug(`context.payload.action:: ${context.payload.action}`);
             if (context.eventName !== 'pull_request' &&
                 context.eventName !== 'pull_request_review') {
                 throw new Error('This action can only be run on `pull_request` or `pull_request_review`');
@@ -109,6 +111,9 @@ function run() {
                     context.payload.action === 'review_request' ||
                     context.payload.action === 'synchronize')) {
                 core.debug('Received PR open event');
+                core.debug(`isValidBot:: ${isValidBot()}`);
+                core.debug(`isAutomerging:: ${isAutomerging()}`);
+                core.debug(`isRenovateUser:: ${isRenovateUser()}`);
                 if (isValidBot() && isAutomerging()) {
                     core.debug('Approving new PR');
                     approvePr();

@@ -71,6 +71,9 @@ const approvePr = async (): Promise<void> => {
 
 async function run(): Promise<void> {
   try {
+    core.debug(`context.eventName:: ${context.eventName}`)
+    core.debug(`context.payload.action:: ${context.payload.action}`)
+
     if (
       context.eventName !== 'pull_request' &&
       context.eventName !== 'pull_request_review'
@@ -87,6 +90,9 @@ async function run(): Promise<void> {
         context.payload.action === 'synchronize')
     ) {
       core.debug('Received PR open event')
+      core.debug(`isValidBot:: ${isValidBot()}`)
+      core.debug(`isAutomerging:: ${isAutomerging()}`)
+      core.debug(`isRenovateUser:: ${isRenovateUser()}`)
       if (isValidBot() && isAutomerging()) {
         core.debug('Approving new PR')
 
