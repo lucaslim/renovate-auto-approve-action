@@ -10,6 +10,10 @@ const context = github.context
 
 const isValidBot = (): boolean => {
   try {
+    core.debug(
+      `context.payload.sender:: ${JSON.stringify(context.payload.sender)}`
+    )
+
     return (
       context.payload.sender?.login === RENOVATE_BOT ||
       context.payload.sender?.login === MEND_BOT
@@ -31,6 +35,9 @@ const isAutomerging = (): boolean => {
 
 const isRenovateUser = (): boolean => {
   try {
+    core.debug(
+      `context.payload.pull_request?.user.login:: ${context.payload.pull_request?.user.login}`
+    )
     return context.payload.pull_request?.user.login === RENOVATE_BOT
   } catch (err) {
     return false
@@ -71,6 +78,7 @@ const approvePr = async (): Promise<void> => {
 
 async function run(): Promise<void> {
   try {
+    core.debug(JSON.stringify(context))
     core.debug(`context.eventName:: ${context.eventName}`)
     core.debug(`context.payload.action:: ${context.payload.action}`)
 

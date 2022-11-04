@@ -49,6 +49,7 @@ const context = github.context;
 const isValidBot = () => {
     var _a, _b;
     try {
+        core.debug(`context.payload.sender:: ${JSON.stringify(context.payload.sender)}`);
         return (((_a = context.payload.sender) === null || _a === void 0 ? void 0 : _a.login) === RENOVATE_BOT ||
             ((_b = context.payload.sender) === null || _b === void 0 ? void 0 : _b.login) === MEND_BOT);
     }
@@ -66,9 +67,10 @@ const isAutomerging = () => {
     }
 };
 const isRenovateUser = () => {
-    var _a;
+    var _a, _b;
     try {
-        return ((_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.user.login) === RENOVATE_BOT;
+        core.debug(`context.payload.pull_request?.user.login:: ${(_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.user.login}`);
+        return ((_b = context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.user.login) === RENOVATE_BOT;
     }
     catch (err) {
         return false;
@@ -100,6 +102,7 @@ const approvePr = () => __awaiter(void 0, void 0, void 0, function* () {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.debug(JSON.stringify(context));
             core.debug(`context.eventName:: ${context.eventName}`);
             core.debug(`context.payload.action:: ${context.payload.action}`);
             if (context.eventName !== 'pull_request' &&
