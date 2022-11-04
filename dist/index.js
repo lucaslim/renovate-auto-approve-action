@@ -41,11 +41,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
-// const APPROVE = 'APPROVE'
+const APPROVE = 'APPROVE';
 const AUTOMERGE_MESSAGE = '**Automerge**: Enabled';
 const RENOVATE_BOT = process.env.RENOVATE_BOT_USER || 'renovate[bot]';
 const MEND_BOT = 'mend-for-github-com[bot]';
-const RENOVATE_APPROVE_BOT = process.env.RENOVATE_APPROVE_BOT_USER || 'renovate-approve[bot]';
 const context = github.context;
 const isValidBot = () => {
     var _a, _b;
@@ -61,14 +60,6 @@ const isAutomerging = () => {
     var _a, _b;
     try {
         return (((_b = (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.body) === null || _b === void 0 ? void 0 : _b.includes(AUTOMERGE_MESSAGE)) || false);
-    }
-    catch (err) {
-        return false;
-    }
-};
-const isRenovateApprover = () => {
-    try {
-        return context.payload.review.user.login === RENOVATE_APPROVE_BOT;
     }
     catch (err) {
         return false;
@@ -102,7 +93,7 @@ const approvePr = () => __awaiter(void 0, void 0, void 0, function* () {
         owner: context.repo.owner,
         repo: context.repo.repo,
         pull_number: prNumber,
-        event: 'APPROVE'
+        event: APPROVE
     });
     core.info(`Approved pull request #${prNumber}`);
 });
@@ -114,7 +105,9 @@ function run() {
                 throw new Error('This action can only be run on `pull_request` or `pull_request_review`');
             }
             if (context.eventName === 'pull_request' &&
-                context.payload.action === 'opened') {
+                (context.payload.action === 'opened' ||
+                    context.payload.action === 'review_request' ||
+                    context.payload.action === 'synchronize')) {
                 core.debug('Received PR open event');
                 if (isValidBot() && isAutomerging()) {
                     core.debug('Approving new PR');
@@ -124,10 +117,7 @@ function run() {
             }
             if (context.eventName === 'pull_request_review' &&
                 context.payload.action === 'dismissed') {
-                if (isValidBot() &&
-                    isAutomerging() &&
-                    isRenovateApprover() &&
-                    isRenovateUser()) {
+                if (isValidBot() && isAutomerging() && isRenovateUser()) {
                     core.debug('Re-approving dismissed approval');
                     approvePr();
                     return;
