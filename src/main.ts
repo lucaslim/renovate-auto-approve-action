@@ -78,7 +78,6 @@ const approvePr = async (): Promise<void> => {
 
 async function run(): Promise<void> {
   try {
-    core.debug(JSON.stringify(context))
     core.debug(`context.eventName:: ${context.eventName}`)
     core.debug(`context.payload.action:: ${context.payload.action}`)
 

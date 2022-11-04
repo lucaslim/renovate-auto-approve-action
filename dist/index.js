@@ -102,7 +102,6 @@ const approvePr = () => __awaiter(void 0, void 0, void 0, function* () {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            core.debug(JSON.stringify(context));
             core.debug(`context.eventName:: ${context.eventName}`);
             core.debug(`context.payload.action:: ${context.payload.action}`);
             if (context.eventName !== 'pull_request' &&
