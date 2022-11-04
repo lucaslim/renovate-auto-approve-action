@@ -39,8 +39,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-/* eslint-disable no-console */
-/* eslint-disable-file */
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 // const APPROVE = 'APPROVE'
@@ -48,75 +46,98 @@ const AUTOMERGE_MESSAGE = '**Automerge**: Enabled';
 const RENOVATE_BOT = process.env.RENOVATE_BOT_USER || 'renovate[bot]';
 const MEND_BOT = 'mend-for-github-com[bot]';
 const RENOVATE_APPROVE_BOT = process.env.RENOVATE_APPROVE_BOT_USER || 'renovate-approve[bot]';
-const isValidBot = (context) => {
+const context = github.context;
+const isValidBot = () => {
     var _a, _b;
     try {
         return (((_a = context.payload.sender) === null || _a === void 0 ? void 0 : _a.login) === RENOVATE_BOT ||
             ((_b = context.payload.sender) === null || _b === void 0 ? void 0 : _b.login) === MEND_BOT);
     }
     catch (err) {
-        // core.log(context.payload)
-        // core.log(err)
         return false;
     }
 };
-const isAutomerging = (context) => {
+const isAutomerging = () => {
     var _a, _b;
     try {
         return (((_b = (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.body) === null || _b === void 0 ? void 0 : _b.includes(AUTOMERGE_MESSAGE)) || false);
     }
     catch (err) {
-        // context.log(context.payload)
-        // context.log(err)
         return false;
     }
 };
-const isRenovateApprover = (context) => {
+const isRenovateApprover = () => {
     try {
         return context.payload.review.user.login === RENOVATE_APPROVE_BOT;
     }
     catch (err) {
-        // context.log(err)
         return false;
     }
 };
-const isRenovateUser = (context) => {
+const isRenovateUser = () => {
     var _a;
     try {
         return ((_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.user.login) === RENOVATE_BOT;
     }
     catch (err) {
-        // context.log(context.payload)
-        // context.log(err)
         return false;
     }
 };
-// const approvePr = (context: Context): boolean => {
-//   try {
-//     const params = context.issue({event: APPROVE})
-//     return context.github.pulls.createReview(params)
-//   } catch (err) {
-//     context.log(err)
-//     context.log(context.payload)
-//   }
-// }
+const getPrNumber = () => {
+    var _a;
+    if (context.eventName !== 'pull_request' &&
+        context.eventName !== 'pull_request_review') {
+        return null;
+    }
+    return ((_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number) || null;
+};
+const approvePr = () => __awaiter(void 0, void 0, void 0, function* () {
+    const prNumber = getPrNumber();
+    if (!prNumber) {
+        throw new Error("Event payload missing `pull_request` key. Make sure you're triggering this action on the `pull_request` or `pull_request_review` events.");
+    }
+    const token = core.getInput('token', { required: true });
+    const client = github.getOctokit(token);
+    yield client.rest.pulls.createReview({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: prNumber,
+        event: 'APPROVE'
+    });
+    core.info(`Approved pull request #${prNumber}`);
+});
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const context = github.context;
-            console.log(context.eventName);
-            console.log(context);
-            console.log(process.env);
-            console.log(isValidBot(context));
-            console.log(isAutomerging(context));
-            console.log(isRenovateApprover(context));
-            console.log(isRenovateUser(context));
-            const token = core.getInput('token');
-            console.log(token);
+            if (context.eventName !== 'pull_request' &&
+                context.eventName !== 'pull_request_review') {
+                throw new Error('This action can only be run on `pull_request` or `pull_request_review`');
+            }
+            if (context.eventName === 'pull_request' &&
+                context.payload.action === 'opened') {
+                core.debug('Received PR open event');
+                if (isValidBot() && isAutomerging()) {
+                    core.debug('Approving new PR');
+                    approvePr();
+                    return;
+                }
+            }
+            if (context.eventName === 'pull_request_review' &&
+                context.payload.action === 'dismissed') {
+                if (isValidBot() &&
+                    isAutomerging() &&
+                    isRenovateApprover() &&
+                    isRenovateUser()) {
+                    core.debug('Re-approving dismissed approval');
+                    approvePr();
+                    return;
+                }
+            }
         }
         catch (error) {
-            if (error instanceof Error)
+            if (error instanceof Error) {
                 core.setFailed(error.message);
+            }
         }
     });
 }

@@ -1,8 +1,5 @@
-/* eslint-disable no-console */
-/* eslint-disable-file */
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {Context} from '@actions/github/lib/context'
 
 // const APPROVE = 'APPROVE'
 const AUTOMERGE_MESSAGE = '**Automerge**: Enabled'
@@ -11,75 +8,121 @@ const MEND_BOT = 'mend-for-github-com[bot]'
 const RENOVATE_APPROVE_BOT =
   process.env.RENOVATE_APPROVE_BOT_USER || 'renovate-approve[bot]'
 
-const isValidBot = (context: Context): boolean => {
+const context = github.context
+
+const isValidBot = (): boolean => {
   try {
     return (
       context.payload.sender?.login === RENOVATE_BOT ||
       context.payload.sender?.login === MEND_BOT
     )
   } catch (err) {
-    // core.log(context.payload)
-    // core.log(err)
     return false
   }
 }
 
-const isAutomerging = (context: Context): boolean => {
+const isAutomerging = (): boolean => {
   try {
     return (
       context.payload.pull_request?.body?.includes(AUTOMERGE_MESSAGE) || false
     )
   } catch (err) {
-    // context.log(context.payload)
-    // context.log(err)
     return false
   }
 }
 
-const isRenovateApprover = (context: Context): boolean => {
+const isRenovateApprover = (): boolean => {
   try {
     return context.payload.review.user.login === RENOVATE_APPROVE_BOT
   } catch (err) {
-    // context.log(err)
     return false
   }
 }
 
-const isRenovateUser = (context: Context): boolean => {
+const isRenovateUser = (): boolean => {
   try {
     return context.payload.pull_request?.user.login === RENOVATE_BOT
   } catch (err) {
-    // context.log(context.payload)
-    // context.log(err)
     return false
   }
 }
-// const approvePr = (context: Context): boolean => {
-//   try {
-//     const params = context.issue({event: APPROVE})
-//     return context.github.pulls.createReview(params)
-//   } catch (err) {
-//     context.log(err)
-//     context.log(context.payload)
-//   }
-// }
+
+const getPrNumber = (): number | null => {
+  if (
+    context.eventName !== 'pull_request' &&
+    context.eventName !== 'pull_request_review'
+  ) {
+    return null
+  }
+
+  return context.payload.pull_request?.number || null
+}
+
+const approvePr = async (): Promise<void> => {
+  const prNumber = getPrNumber()
+  if (!prNumber) {
+    throw new Error(
+      "Event payload missing `pull_request` key. Make sure you're triggering this action on the `pull_request` or `pull_request_review` events."
+    )
+  }
+
+  const token = core.getInput('token', {required: true})
+  const client = github.getOctokit(token)
+
+  await client.rest.pulls.createReview({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pull_number: prNumber,
+    event: 'APPROVE'
+  })
+
+  core.info(`Approved pull request #${prNumber}`)
+}
 
 async function run(): Promise<void> {
   try {
-    const context = github.context
-    console.log(context.eventName)
-    console.log(context)
-    console.log(process.env)
+    if (
+      context.eventName !== 'pull_request' &&
+      context.eventName !== 'pull_request_review'
+    ) {
+      throw new Error(
+        'This action can only be run on `pull_request` or `pull_request_review`'
+      )
+    }
 
-    console.log(isValidBot(context))
-    console.log(isAutomerging(context))
-    console.log(isRenovateApprover(context))
-    console.log(isRenovateUser(context))
+    if (
+      context.eventName === 'pull_request' &&
+      context.payload.action === 'opened'
+    ) {
+      core.debug('Received PR open event')
+      if (isValidBot() && isAutomerging()) {
+        core.debug('Approving new PR')
 
-    const token = core.getInput('token')
-    console.log(token)
+        approvePr()
+        return
+      }
+    }
+
+    if (
+      context.eventName === 'pull_request_review' &&
+      context.payload.action === 'dismissed'
+    ) {
+      if (
+        isValidBot() &&
+        isAutomerging() &&
+        isRenovateApprover() &&
+        isRenovateUser()
+      ) {
+        core.debug('Re-approving dismissed approval')
+
+        approvePr()
+        return
+      }
+    }
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) {
+      core.setFailed(error.message)
+    }
   }
 }
 
