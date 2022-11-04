@@ -74,6 +74,9 @@ async function run(): Promise<void> {
     console.log(isAutomerging(context))
     console.log(isRenovateApprover(context))
     console.log(isRenovateUser(context))
+
+    const token = core.getInput('token')
+    console.log(token)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
