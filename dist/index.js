@@ -105,7 +105,7 @@ function run() {
         try {
             const context = github.context;
             console.log(context.eventName);
-            console.log(context.action);
+            console.log(context);
             console.log(isValidBot(context));
             console.log(isAutomerging(context));
             console.log(isRenovateApprover(context));
