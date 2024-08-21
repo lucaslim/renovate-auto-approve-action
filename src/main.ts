@@ -18,7 +18,7 @@ const isValidBot = (): boolean => {
       context.payload.sender?.login === RENOVATE_BOT ||
       context.payload.sender?.login === MEND_BOT
     )
-  } catch (err) {
+  } catch {
     return false
   }
 }
@@ -28,7 +28,7 @@ const isAutomerging = (): boolean => {
     return (
       context.payload.pull_request?.body?.includes(AUTOMERGE_MESSAGE) || false
     )
-  } catch (err) {
+  } catch {
     return false
   }
 }
@@ -39,7 +39,7 @@ const isRenovateUser = (): boolean => {
       `context.payload.pull_request?.user.login:: ${context.payload.pull_request?.user.login}`
     )
     return context.payload.pull_request?.user.login === RENOVATE_BOT
-  } catch (err) {
+  } catch {
     return false
   }
 }
