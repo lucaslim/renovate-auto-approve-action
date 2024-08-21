@@ -1,26 +1,127 @@
 import * as core from '@actions/core'
-import { wait } from './wait'
+import * as github from '@actions/github'
 
-/**
- * The main function for the action.
- * @returns {Promise<void>} Resolves when the action is complete.
- */
+const APPROVE = 'APPROVE'
+const AUTOMERGE_MESSAGE = '**Automerge**: Enabled'
+const RENOVATE_BOT = process.env.RENOVATE_BOT_USER || 'renovate[bot]'
+const MEND_BOT = 'mend-for-github-com[bot]'
+
+const context = github.context
+
+const isValidBot = (): boolean => {
+  try {
+    core.debug(
+      `context.payload.sender:: ${JSON.stringify(context.payload.sender)}`
+    )
+
+    return (
+      context.payload.sender?.login === RENOVATE_BOT ||
+      context.payload.sender?.login === MEND_BOT
+    )
+  } catch (err) {
+    return false
+  }
+}
+
+const isAutomerging = (): boolean => {
+  try {
+    return (
+      context.payload.pull_request?.body?.includes(AUTOMERGE_MESSAGE) || false
+    )
+  } catch (err) {
+    return false
+  }
+}
+
+const isRenovateUser = (): boolean => {
+  try {
+    core.debug(
+      `context.payload.pull_request?.user.login:: ${context.payload.pull_request?.user.login}`
+    )
+    return context.payload.pull_request?.user.login === RENOVATE_BOT
+  } catch (err) {
+    return false
+  }
+}
+
+const getPrNumber = (): number | null => {
+  if (
+    context.eventName !== 'pull_request' &&
+    context.eventName !== 'pull_request_review'
+  ) {
+    return null
+  }
+
+  return context.payload.pull_request?.number || null
+}
+
+const approvePr = async (): Promise<void> => {
+  const prNumber = getPrNumber()
+  if (!prNumber) {
+    throw new Error(
+      "Event payload missing `pull_request` key. Make sure you're triggering this action on the `pull_request` or `pull_request_review` events."
+    )
+  }
+
+  const token = core.getInput('token', { required: true })
+  const client = github.getOctokit(token)
+
+  await client.rest.pulls.createReview({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pull_number: prNumber,
+    event: APPROVE
+  })
+
+  core.info(`Approved pull request #${prNumber}`)
+}
+
 export async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
+    core.debug(`context.eventName:: ${context.eventName}`)
+    core.debug(`context.payload.action:: ${context.payload.action}`)
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    if (
+      context.eventName !== 'pull_request' &&
+      context.eventName !== 'pull_request_review'
+    ) {
+      throw new Error(
+        'This action can only be run on `pull_request` or `pull_request_review`'
+      )
+    }
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    if (
+      context.eventName === 'pull_request' &&
+      (context.payload.action === 'opened' ||
+        context.payload.action === 'review_request' ||
+        context.payload.action === 'synchronize')
+    ) {
+      core.debug('Received PR open event')
+      core.debug(`isValidBot:: ${isValidBot()}`)
+      core.debug(`isAutomerging:: ${isAutomerging()}`)
+      core.debug(`isRenovateUser:: ${isRenovateUser()}`)
+      if (isValidBot() && isAutomerging()) {
+        core.debug('Approving new PR')
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+        approvePr()
+        return
+      }
+    }
+
+    if (
+      context.eventName === 'pull_request_review' &&
+      context.payload.action === 'dismissed'
+    ) {
+      if (isValidBot() && isAutomerging() && isRenovateUser()) {
+        core.debug('Re-approving dismissed approval')
+
+        approvePr()
+        return
+      }
+    }
   } catch (error) {
-    // Fail the workflow run if an error occurs
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) {
+      core.setFailed(error.message)
+    }
   }
 }

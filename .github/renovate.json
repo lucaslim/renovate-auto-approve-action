@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "commitMessagePrefix": "Packages -",
+  "enabledManagers": ["github-actions", "npm", "nvm"],
+  "extends": [
+    "config:best-practices",
+    ":automergeMinor",
+    ":automergePr",
+    ":automergeRequireAllStatusChecks",
+    ":maintainLockFilesWeekly",
+    ":pinVersions",
+    ":prHourlyLimitNone",
+    ":prImmediately",
+    ":separateMultipleMajorReleases",
+    "npm:unpublishSafe",
+    "group:nodeJs",
+    "group:definitelyTyped"
+  ],
+  "platformAutomerge": true,
+  "rebaseWhen": "behind-base-branch",
+  "reviewers": ["lucaslim"],
+  "reviewersSampleSize": 1,
+  "timezone": "America/Toronto"
+}
