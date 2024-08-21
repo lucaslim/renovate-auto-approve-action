@@ -1,3 +1,8 @@
-# Repository CODEOWNERS
+* lucaslim
 
-* @actions/actions-oss-maintainers
+# CODEOWNERS prevent renovate automerge since it will automatically ask for review
+# See documentation for more details: https://docs.renovatebot.com/key-concepts/automerge/#codeowners
+# To allow us to perform auto merge on renovate's pull requests
+.github/**
+**/package.json
+**/package-lock.lock
