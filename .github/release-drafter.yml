@@ -54,4 +54,4 @@ version-resolver:
 
 include-pre-releases: true
 filter-by-commitish: true
-commitish: master
+commitish: main
