@@ -20,5 +20,6 @@
   "rebaseWhen": "behind-base-branch",
   "reviewers": ["lucaslim"],
   "reviewersSampleSize": 1,
-  "timezone": "America/Toronto"
+  "timezone": "America/Toronto",
+  "labels": ["dependencies"]
 }
